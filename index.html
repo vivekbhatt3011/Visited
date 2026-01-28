@@ -12,19 +12,23 @@
   />
 
   <link rel="stylesheet" href="css/style.css" />
+  <link rel="icon" href="favicon.ico" />
 </head>
 <body>
 
-  <!-- Map MUST be top-level -->
+  <!-- Fullscreen Map -->
   <div id="map"></div>
 
-  <!-- Locate button -->
+  <!-- Locate Me -->
   <button id="locate-btn" title="Go to my location">📍</button>
 
-  <!-- Leaflet JS -->
+  <!-- Leaflet -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- App Entry -->
+  <!-- Dexie (IndexedDB) -->
+  <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.min.js"></script>
+
+  <!-- App -->
   <script type="module" src="js/app.js"></script>
 
 </body>
