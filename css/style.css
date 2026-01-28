@@ -1,36 +1,29 @@
-/* Global reset */
+/* Reset everything */
 * {
   box-sizing: border-box;
 }
 
-/* Full viewport */
 html, body {
   width: 100%;
   height: 100%;
   margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
-/* Root container */
-#app {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-}
-
-/* Map fills available space */
+/* Map fills viewport EXACTLY */
 #map {
-  flex: 1 1 auto;
-  width: 100%;
-  min-height: 0; /* prevents flex overflow issues */
+  position: fixed;
+  inset: 0;           /* top:0 right:0 bottom:0 left:0 */
+  z-index: 1;
 }
 
-/* Floating locate button */
+/* Locate button ALWAYS on top */
 #locate-btn {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  z-index: 1000;
+  z-index: 1000;      /* 🔑 above Leaflet */
 
   width: 48px;
   height: 48px;
@@ -42,7 +35,7 @@ html, body {
   font-size: 22px;
   cursor: pointer;
 
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
 }
 
 #locate-btn:active {
