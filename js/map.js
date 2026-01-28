@@ -4,10 +4,9 @@ let userMarker = null;
 export function initMap() {
   map = L.map('map', {
     zoomControl: true,
-    worldCopyJump: true // allows smooth horizontal repetition
+    worldCopyJump: true
   });
 
-  // Detailed, open-source map tiles
   L.tileLayer(
     'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
     {
@@ -17,78 +16,48 @@ export function initMap() {
     }
   ).addTo(map);
 
-  // Initial location on load
-  locateUser();
+  map.setView([20, 0], 2);
 
-  // Button to re-center on user
+  // Force correct size AFTER layout
+  setTimeout(() => {
+    map.invalidateSize();
+  }, 0);
+
   document
     .getElementById('locate-btn')
     .addEventListener('click', locateUser);
 
-  // Clamp latitude to avoid vertical repetition
-  map.on('move', clampLatitude);
+  map.on('locationfound', onLocationFound);
+  map.on('locationerror', onLocationError);
 }
 
-/**
- * Prevent vertical world repetition
- */
-function clampLatitude() {
-  const center = map.getCenter();
-  const maxLat = 85;
-
-  if (center.lat > maxLat) {
-    map.setView([maxLat, center.lng], map.getZoom(), { animate: false });
-  }
-
-  if (center.lat < -maxLat) {
-    map.setView([-maxLat, center.lng], map.getZoom(), { animate: false });
-  }
-}
-
-/**
- * Locate user and mark as landmark icon
- */
 function locateUser() {
-  if (!navigator.geolocation) {
-    fallbackView();
-    return;
-  }
-
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      const lat = position.coords.latitude;
-      const lng = position.coords.longitude;
-      const userLatLng = [lat, lng];
-
-      map.setView(userLatLng, 13, { animate: true });
-
-      const userIcon = L.icon({
-        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
-      });
-
-      if (!userMarker) {
-        userMarker = L.marker(userLatLng, {
-          icon: userIcon,
-          keyboard: false
-        }).addTo(map);
-      } else {
-        userMarker.setLatLng(userLatLng);
-      }
-    },
-    () => fallbackView(),
-    {
-      enableHighAccuracy: true,
-      timeout: 10000
-    }
-  );
+  map.locate({
+    setView: false,
+    enableHighAccuracy: true,
+    timeout: 10000
+  });
 }
 
-/**
- * Default view if location is unavailable
- */
-function fallbackView() {
-  map.setView([20, 78], 4);
+function onLocationFound(e) {
+  const latlng = e.latlng;
+
+  map.setView(latlng, 13, { animate: true });
+
+  const userIcon = L.icon({
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
+  });
+
+  if (!userMarker) {
+    userMarker = L.marker(latlng, { icon: userIcon }).addTo(map);
+  } else {
+    userMarker.setLatLng(latlng);
+  }
+}
+
+function onLocationError(err) {
+  console.warn('Location error:', err.message);
 }
