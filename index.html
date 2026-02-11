@@ -5,30 +5,37 @@
   <title>MyFootprints</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Leaflet CSS -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
+  <!-- Leaflet -->
+  <link rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Marker Cluster -->
+  <link rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e90ff">
 
   <link rel="stylesheet" href="css/style.css" />
-  <link rel="icon" href="favicon.ico" />
 </head>
+
 <body>
 
-  <!-- Fullscreen Map -->
   <div id="map"></div>
 
-  <!-- Locate Me -->
-  <button id="locate-btn" title="Go to my location">📍</button>
+  <button id="locate-btn">📍</button>
+  <button id="export-btn">⬇</button>
+  <button id="import-btn">⬆</button>
+  <input type="file" id="import-file" hidden />
 
-  <!-- Leaflet -->
+  <div id="stats"></div>
+
+  <!-- Scripts -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <!-- Dexie (IndexedDB) -->
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.min.js"></script>
 
-  <!-- App -->
   <script type="module" src="js/app.js"></script>
 
 </body>
