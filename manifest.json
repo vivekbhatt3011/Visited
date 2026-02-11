@@ -1,0 +1,8 @@
+{
+  "name": "MyFootprints",
+  "short_name": "Footprints",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#1e90ff",
+  "theme_color": "#1e90ff"
+}

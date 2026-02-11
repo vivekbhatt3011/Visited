@@ -1,90 +1,64 @@
 import {
   addVisited,
-  removeVisited,
-  isVisited,
+  getVisitedSet,
   addLocalLandmark,
-  getAllLocalLandmarks
+  getAllLocalLandmarks,
+  getStats,
+  exportData,
+  importData
 } from './storage.js';
 
 let map;
+let markers;
 let userMarker = null;
-let firstLocate = true;
 
-/* ---------- Init ---------- */
-
-export function initMap() {
-  map = L.map('map', {
-    zoomControl: true,
-    worldCopyJump: true
-  });
+export async function initMap() {
+  map = L.map('map').setView([20, 0], 3);
 
   L.tileLayer(
     'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    {
-      attribution: '© OpenStreetMap contributors © CARTO',
-      maxZoom: 19,
-      minZoom: 2
-    }
+    { maxZoom: 19 }
   ).addTo(map);
 
-  map.setView([20, 0], 2);
-  setTimeout(() => map.invalidateSize(), 0);
-
-  map.on('locationfound', onLocationFound);
-  map.on('locationerror', () => map.setView([20, 0], 2));
-
-  document.getElementById('locate-btn').addEventListener('click', () => {
-    firstLocate = false;
-    locateUser();
-  });
+  markers = L.markerClusterGroup();
+  map.addLayer(markers);
 
   map.on('contextmenu', onMapRightClick);
 
-  locateUser();
-  loadLocalLandmarks();
-  loadGlobalLandmarks(); // 🔑 FIX
+  document.getElementById('locate-btn').onclick = locateUser;
+
+  setupExportImport();
+
+  await loadLandmarks();
+  await updateStats();
 }
 
-/* ---------- Location ---------- */
+/* ---------- Load Landmarks ---------- */
 
-function locateUser() {
-  map.locate({ setView: false, enableHighAccuracy: true });
-}
+async function loadLandmarks() {
+  markers.clearLayers();
 
-function onLocationFound(e) {
-  const zoom = firstLocate ? 5 : 13;
-  map.setView(e.latlng, zoom, { animate: true });
-
-  if (!userMarker) {
-    userMarker = L.marker(e.latlng, { icon: userLocationIcon() }).addTo(map);
-  } else {
-    userMarker.setLatLng(e.latlng);
-  }
-}
-
-/* ---------- Global Landmarks ---------- */
-
-async function loadGlobalLandmarks() {
   const res = await fetch('./data/landmarks.json');
-  const landmarks = await res.json();
+  const global = await res.json();
+  const local = await getAllLocalLandmarks();
+  const visitedSet = await getVisitedSet();
 
-  for (const place of landmarks) {
-    const visited = await isVisited(place.id);
-    if (!visited) continue;
+  [...global, ...local].forEach(place => {
+    if (!visitedSet.has(place.id)) return;
 
-    renderVisitedLandmark(place);
-  }
+    const marker = L.marker(
+      [place.lat, place.lng],
+      { icon: visitedIcon() }
+    ).bindPopup(place.name);
+
+    markers.addLayer(marker);
+  });
 }
 
-/* ---------- Local Landmarks ---------- */
-
-async function loadLocalLandmarks() {
-  const landmarks = await getAllLocalLandmarks();
-  landmarks.forEach(renderLocalLandmark);
-}
+/* ---------- Local Add ---------- */
 
 async function onMapRightClick(e) {
-  const name = prompt('Name this place:');
+  const name = prompt("Name this place:");
   if (!name) return;
 
   const place = {
@@ -95,32 +69,62 @@ async function onMapRightClick(e) {
   };
 
   await addLocalLandmark(place);
-  await addVisited(place);
+  await addVisited(place.id);
 
-  renderVisitedLandmark(place);
+  await loadLandmarks();
+  await updateStats();
 }
 
-async function renderLocalLandmark(place) {
-  const visited = await isVisited(place.id);
-  if (!visited) return;
+/* ---------- Locate (Red Marker) ---------- */
 
-  renderVisitedLandmark(place);
-}
+function locateUser() {
+  map.locate({ enableHighAccuracy: true });
 
-/* ---------- Shared Renderer ---------- */
+  map.on('locationfound', e => {
+    map.setView(e.latlng, 13);
 
-function renderVisitedLandmark(place) {
-  const marker = L.marker(
-    [place.lat, place.lng],
-    { icon: visitedIcon() }
-  )
-    .addTo(map)
-    .bindPopup(place.name);
-
-  marker.on('click', async () => {
-    await removeVisited(place.id);
-    map.removeLayer(marker);
+    if (!userMarker) {
+      userMarker = L.marker(
+        e.latlng,
+        { icon: userLocationIcon() }
+      ).addTo(map);
+    } else {
+      userMarker.setLatLng(e.latlng);
+    }
   });
+}
+
+/* ---------- Export / Import ---------- */
+
+function setupExportImport() {
+  document.getElementById('export-btn').onclick = async () => {
+    const data = await exportData();
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'myfootprints-backup.json';
+    a.click();
+  };
+
+  const fileInput = document.getElementById('import-file');
+
+  document.getElementById('import-btn').onclick = () =>
+    fileInput.click();
+
+  fileInput.onchange = async e => {
+    const file = e.target.files[0];
+    const text = await file.text();
+    await importData(JSON.parse(text));
+    location.reload();
+  };
+}
+
+/* ---------- Stats ---------- */
+
+async function updateStats() {
+  const stats = await getStats();
+  document.getElementById('stats').innerText =
+    `Visited: ${stats.visited} | Custom: ${stats.local}`;
 }
 
 /* ---------- Icons ---------- */
@@ -129,8 +133,8 @@ function visitedIcon() {
   return L.icon({
     iconUrl:
       'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
+    iconSize: [25,41],
+    iconAnchor: [12,41],
     shadowUrl:
       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
   });
@@ -140,8 +144,8 @@ function userLocationIcon() {
   return L.icon({
     iconUrl:
       'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
+    iconSize: [25,41],
+    iconAnchor: [12,41],
     shadowUrl:
       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
   });

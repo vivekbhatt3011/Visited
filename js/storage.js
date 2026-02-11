@@ -1,41 +1,59 @@
 export const db = new Dexie('MyFootprintsDB');
 
-db.version(2).stores({
-  visited: 'id, lat, lng, visitedAt',
+db.version(3).stores({
+  visited: 'id, visitedAt',
   local: 'id, name, lat, lng, createdAt'
 });
 
 /* ---------- Visited ---------- */
 
-export async function addVisited(place) {
-  return db.visited.put({
-    id: place.id,
-    lat: place.lat,
-    lng: place.lng,
-    visitedAt: Date.now()
-  });
+export async function addVisited(id) {
+  return db.visited.put({ id, visitedAt: Date.now() });
 }
 
 export async function removeVisited(id) {
   return db.visited.delete(id);
 }
 
-export async function isVisited(id) {
-  return !!(await db.visited.get(id));
+export async function getVisitedSet() {
+  const all = await db.visited.toArray();
+  return new Set(all.map(v => v.id));
 }
 
-/* ---------- Local Landmarks ---------- */
+/* ---------- Local ---------- */
 
 export async function addLocalLandmark(place) {
   return db.local.put({
-    id: place.id,
-    name: place.name,
-    lat: place.lat,
-    lng: place.lng,
+    ...place,
     createdAt: Date.now()
   });
 }
 
 export async function getAllLocalLandmarks() {
   return db.local.toArray();
+}
+
+/* ---------- Export / Import ---------- */
+
+export async function exportData() {
+  return {
+    visited: await db.visited.toArray(),
+    local: await db.local.toArray()
+  };
+}
+
+export async function importData(data) {
+  await db.transaction('rw', db.visited, db.local, async () => {
+    await db.visited.bulkPut(data.visited);
+    await db.local.bulkPut(data.local);
+  });
+}
+
+/* ---------- Stats ---------- */
+
+export async function getStats() {
+  return {
+    visited: await db.visited.count(),
+    local: await db.local.count()
+  };
 }
